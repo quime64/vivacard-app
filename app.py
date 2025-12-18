@@ -126,5 +126,29 @@ if st.button(t["boton_generar"]):
     with st.spinner(t["spinner"]):
         time.sleep(1)
         
+        # Lógica de voz corregida para evitar errores de copia
         if idioma == "Español":
-            texto_voz = f"Hola {destinatario}. {mensaje}. De parte
+            texto_voz = f"Hola {destinatario}. {mensaje}. De parte de {remitente}."
+        else:
+            texto_voz = f"Hi {destinatario}. {mensaje}. From {remitente}."
+
+        tts = gTTS(text=texto_voz, lang=t["codigo_voz"], slow=False)
+        buffer_audio = BytesIO()
+        tts.write_to_fp(buffer_audio)
+        
+        imagen_bytes = crear_imagen_descargable(
+            ocasion, mensaje, remitente, destinatario, 
+            alma['hex'], t
+        )
+        
+        st.success(t["exito"])
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.image(imagen_bytes)
+            st.download_button(label=t["btn_descarga_img"], data=imagen_bytes, file_name="cardia_card.png", mime="image/png")
+            
+        with col2:
+            st.audio(buffer_audio, format='audio/mp3')
+            st.download_button(label=t["btn_descarga_audio"], data=buffer_audio, file_name="cardia_voice.mp3", mime="audio/mpeg")
