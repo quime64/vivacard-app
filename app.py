@@ -49,60 +49,52 @@ TEXTOS = {
 
 # --- 2. LÓGICA DE COLORES ("EL ALMA") ---
 def obtener_color_fondo(ocasion_texto):
-    # Diccionario de colores según la palabra clave
     if "Cumpleaños" in ocasion_texto or "Birthday" in ocasion_texto:
-        return (255, 223, 186) # Durazno pastel
+        return (255, 223, 186) # Durazno
     elif "Bodas" in ocasion_texto or "Wedding" in ocasion_texto:
-        return (255, 240, 245) # Lavanda/Rosa muy claro
+        return (255, 240, 245) # Lavanda
     elif "Navidad" in ocasion_texto or "Christmas" in ocasion_texto:
-        return (200, 50, 50) # Rojo Navidad
+        return (200, 50, 50) # Rojo
     elif "Condolencias" in ocasion_texto or "Sympathy" in ocasion_texto:
-        return (220, 220, 220) # Gris respetuoso
+        return (220, 220, 220) # Gris
     elif "Fe" in ocasion_texto or "Faith" in ocasion_texto:
-        return (224, 255, 255) # Celeste cielo
+        return (224, 255, 255) # Celeste
     elif "Amor" in ocasion_texto or "Love" in ocasion_texto:
-        return (255, 182, 193) # Rosa Amor
+        return (255, 182, 193) # Rosa
     else:
-        return (255, 255, 255) # Blanco por defecto
+        return (255, 255, 255)
 
-# --- 3. GENERADOR DE IMAGEN ---
+# --- 3. GENERADOR DE IMAGEN (MEJORADO) ---
 def generar_imagen_tarjeta(ocasion, de, para, mensaje, textos_ui):
-    # Obtener color según la ocasión
     color_bg = obtener_color_fondo(ocasion)
-    
-    # Crear lienzo (600x600 px)
     img = Image.new('RGB', (600, 600), color=color_bg)
     d = ImageDraw.Draw(img)
     
-    # Intentar cargar fuente por defecto
+    # Intentamos cargar la fuente por defecto
     try:
-        fnt_grande = ImageFont.load_default()
-        fnt_mediana = ImageFont.load_default()
+        font = ImageFont.load_default()
     except:
-        fnt_grande = ImageFont.load_default()
-        fnt_mediana = ImageFont.load_default()
+        font = ImageFont.load_default()
 
-    # Color del texto (Blanco para fondos oscuros como Navidad, Negro para el resto)
-    if color_bg == (200, 50, 50): # Si es rojo navidad
-        fill_color = (255, 255, 255)
-    else:
-        fill_color = (0, 0, 0)
+    # Color del texto
+    fill_color = (255, 255, 255) if color_bg == (200, 50, 50) else (0, 0, 0)
 
-    # Dibujar textos (Posiciones fijas para evitar errores)
-    # Título (Ocasión)
-    d.text((50, 50), f"~ {ocasion} ~", font=fnt_grande, fill=fill_color)
+    # Escribimos los textos con un poco más de separación
+    # Nota: Sin archivos de fuentes externas, el tamaño es fijo, 
+    # pero podemos centrarlo mejor.
     
-    # Para
-    d.text((50, 120), f"{textos_ui['para']} {para}", font=fnt_mediana, fill=fill_color)
+    d.text((50, 50), f"~ {ocasion} ~", font=font, fill=fill_color)
+    d.text((50, 100), f"{textos_ui['para']} {para}", font=font, fill=fill_color)
     
-    # Mensaje (Dividimos el texto si es muy largo visualmente - simple)
-    # Aquí imprimimos el mensaje en el centro
-    d.text((50, 200), mensaje, font=fnt_mediana, fill=fill_color)
+    # Mensaje (Hacemos que salte de línea si es largo)
+    margin = 50
+    offset = 180
+    for line in mensaje.split('\n'):
+        d.text((margin, offset), line, font=font, fill=fill_color)
+        offset += 20 
     
-    # De
-    d.text((50, 500), f"{textos_ui['de']} {de}", font=fnt_mediana, fill=fill_color)
+    d.text((50, 500), f"{textos_ui['de']} {de}", font=font, fill=fill_color)
     
-    # Guardar en memoria
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
@@ -115,41 +107,39 @@ st.title(t["titulo"])
 st.markdown(f"*{t['subtitulo']}*")
 st.markdown("---")
 
-# Barra lateral
 st.sidebar.header(t["sidebar_tit"])
 ocasion_input = st.sidebar.selectbox(t["ocasion"], t["opciones_ocasion"])
 remitente_input = st.sidebar.text_input(t["de"], "Alex")
 destinatario_input = st.sidebar.text_input(t["para"], "Sam")
 mensaje_input = st.text_area(t["mensaje"], t["msg_ejemplo"])
 
-# Botón de acción
 if st.button(t["boton"], type="primary"):
     with st.spinner(t["spinner"]):
-        time.sleep(1) # Pequeña pausa dramática
+        time.sleep(1)
         
-        # 1. Lógica de Audio (Texto a Voz)
-        # Construimos el texto de forma segura para evitar errores de sintaxis
+        # 1. AUDIO (Corregido para evitar error de reproducción)
         if idioma_sel == "Español":
-            texto_para_leer = f"Hola {destinatario_input}. {mensaje_input}. De parte de {remitente_input}."
+            texto_leer = f"Hola {destinatario_input}. {mensaje_input}. De parte de {remitente_input}."
         else:
-            texto_para_leer = f"Hi {destinatario_input}. {mensaje_input}. From {remitente_input}."
+            texto_leer = f"Hi {destinatario_input}. {mensaje_input}. From {remitente_input}."
             
-        tts = gTTS(text=texto_para_leer, lang=t["voz_code"])
+        tts = gTTS(text=texto_leer, lang=t["voz_code"])
         audio_io = BytesIO()
         tts.write_to_fp(audio_io)
+        audio_io.seek(0)  # <--- ¡ESTA ES LA CURA MÁGICA! (Rebobinar cinta)
         
-        # 2. Lógica de Imagen
+        # 2. IMAGEN
         img_data = generar_imagen_tarjeta(ocasion_input, remitente_input, destinatario_input, mensaje_input, t)
         
-        # 3. Mostrar Resultados
+        # 3. MOSTRAR RESULTADOS
         st.success(t["exito"])
         
         col1, col2 = st.columns(2)
         
         with col1:
             st.image(img_data, caption=f"Tarjeta de {ocasion_input}")
-            st.download_button(t["desc_img"], img_data, "tarjeta_cardia.png", "image/png")
+            st.download_button(t["desc_img"], img_data, "tarjeta.png", "image/png")
             
         with col2:
             st.audio(audio_io, format='audio/mp3')
-            st.download_button(t["desc_audio"], audio_io, "mensaje_cardia.mp3", "audio/mpeg")
+            st.download_button(t["desc_audio"], audio_io, "mensaje.mp3", "audio/mpeg")
