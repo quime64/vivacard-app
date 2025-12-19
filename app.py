@@ -4,151 +4,103 @@ from gtts import gTTS
 from io import BytesIO
 from PIL import Image, ImageDraw, ImageFont
 
-# --- CONFIGURACIÓN DE LA PÁGINA ---
-st.set_page_config(page_title="Cardia AI", page_icon="💌", layout="centered")
+# Configuración básica
+st.set_page_config(page_title="Cardia AI", page_icon="💌")
 
-# --- 1. DICCIONARIO DE TRADUCCIONES ---
+# --- TEXTOS Y TRADUCCIONES ---
 TEXTOS = {
     "Español": {
-        "titulo": "💾 Cardia IA: Generador de Tarjetas",
+        "titulo": "💌 Generador de Tarjetas",
         "subtitulo": "Crea tarjetas con alma en segundos.",
-        "sidebar_titulo": "💌 Personaliza tu Tarjeta",
-        "label_idioma": "Selecciona Idioma / Select Language",
-        "label_ocasion": "Ocasión",
-        "opciones_ocasion": ["🎂 Cumpleaños", "💍 Bodas", "🎄 Navidad", "😔 Condolencias", "🙏 Fe"],
-        "label_remitente": "Tu nombre (De parte de)",
-        "label_destinatario": "Nombre del destinatario (Para)",
-        "label_mensaje": "Escribe tu mensaje",
-        "placeholder_mensaje": "Escribe algo bonito aquí...",
-        "boton_generar": "✨ Generar Archivos",
-        "spinner": "Creando magia... (Generando audio e imagen)",
-        "exito": "¡Archivos listos para compartir!",
-        "btn_descarga_img": "⬇️ Descargar Tarjeta (PNG)",
-        "btn_descarga_audio": "⬇️ Descargar Audio (MP3)",
-        "img_texto_para": "Para:",
-        "img_texto_de": "De:",
-        "img_texto_ocasion": "Ocasión:",
-        "codigo_voz": "es" 
+        "boton": "✨ Generar Archivos",
+        "exito": "¡Listo! Baja y descarga tus archivos.",
+        "ocasion": "Ocasión",
+        "de": "De parte de:",
+        "para": "Para:",
+        "mensaje": "Mensaje:",
+        "descarga_img": "Descargar Imagen",
+        "descarga_audio": "Descargar Audio",
+        "lang_code": "es"
     },
     "English": {
-        "titulo": "💾 Cardia AI: Card Generator",
+        "titulo": "💌 Card Generator",
         "subtitulo": "Create soulful cards in seconds.",
-        "sidebar_titulo": "💌 Customize your Card",
-        "label_idioma": "Select Language / Selecciona Idioma",
-        "label_ocasion": "Occasion",
-        "opciones_ocasion": ["🎂 Birthday", "💍 Wedding", "🎄 Christmas", "😔 Sympathy", "🙏 Faith"],
-        "label_remitente": "Your Name (From)",
-        "label_destinatario": "Recipient's Name (To)",
-        "label_mensaje": "Write your message",
-        "placeholder_mensaje": "Write something nice here...",
-        "boton_generar": "✨ Generate Files",
-        "spinner": "Making magic... (Generating audio and image)",
-        "exito": "Files ready to share!",
-        "btn_descarga_img": "⬇️ Download Card (PNG)",
-        "btn_descarga_audio": "⬇️ Download Audio (MP3)",
-        "img_texto_para": "To:",
-        "img_texto_de": "From:",
-        "img_texto_ocasion": "Occasion:",
-        "codigo_voz": "en" 
+        "boton": "✨ Generate Files",
+        "exito": "Done! Scroll down to download.",
+        "ocasion": "Occasion",
+        "de": "From:",
+        "para": "To:",
+        "mensaje": "Message:",
+        "descarga_img": "Download Image",
+        "descarga_audio": "Download Audio",
+        "lang_code": "en"
     }
 }
 
-# --- 2. LÓGICA DE ESTILOS (Colores) ---
-def obtener_alma(ocasion_seleccionada):
-    mapa_estilos = {
-        "🎂 Cumpleaños": {"color": "#FFD700", "hex": (255, 215, 0)},
-        "💍 Bodas": {"color": "#FFC0CB", "hex": (255, 192, 203)},
-        "🎄 Navidad": {"color": "#b22222", "hex": (178, 34, 34)},
-        "😔 Condolencias": {"color": "#8e9aaf", "hex": (142, 154, 175)},
-        "🙏 Fe": {"color": "#87CEEB", "hex": (135, 206, 235)},
-        "🎂 Birthday": {"color": "#FFD700", "hex": (255, 215, 0)},
-        "💍 Wedding": {"color": "#FFC0CB", "hex": (255, 192, 203)},
-        "🎄 Christmas": {"color": "#b22222", "hex": (178, 34, 34)},
-        "😔 Sympathy": {"color": "#8e9aaf", "hex": (142, 154, 175)},
-        "🙏 Faith": {"color": "#87CEEB", "hex": (135, 206, 235)}
-    }
-    return mapa_estilos.get(ocasion_seleccionada, mapa_estilos["🎂 Cumpleaños"])
+# --- BARRA LATERAL (CONTROLES) ---
+idioma = st.sidebar.radio("Idioma / Language", ["Español", "English"])
+t = TEXTOS[idioma]
 
-# --- 3. GENERADOR DE IMAGEN ---
-def crear_imagen_descargable(ocasion, mensaje, remitente, destinatario, color_fondo, textos_idioma):
-    img = Image.new('RGB', (600, 800), color=color_fondo)
+st.title(t["titulo"])
+st.write(t["subtitulo"])
+
+# Entradas de datos
+ocasion = st.sidebar.selectbox(t["ocasion"], ["Cumpleaños", "Amor", "Navidad", "Fe"])
+remitente = st.sidebar.text_input(t["de"], "Alex")
+destinatario = st.sidebar.text_input(t["para"], "Sam")
+mensaje = st.text_area(t["mensaje"], "Escribe algo bonito...")
+
+# --- FUNCIÓN: CREAR IMAGEN ---
+def crear_imagen(ocasion, para, de, texto):
+    # Crear fondo de color
+    color = (255, 230, 230) # Rosado suave por defecto
+    if "Cumpleaños" in ocasion: color = (255, 215, 0) # Dorado
+    if "Navidad" in ocasion: color = (200, 50, 50) # Rojo
+    if "Fe" in ocasion: color = (135, 206, 235) # Azul cielo
+    
+    img = Image.new('RGB', (500, 500), color=color)
     d = ImageDraw.Draw(img)
     
+    # Intentar cargar fuente, si falla usar la básica
     try:
-        font_titulo = ImageFont.truetype("arial.ttf", 40)
-        font_texto = ImageFont.truetype("arial.ttf", 24)
+        fnt = ImageFont.load_default()
     except:
-        font_titulo = ImageFont.load_default()
-        font_texto = ImageFont.load_default()
+        fnt = ImageFont.load_default()
 
-    lbl_occ = textos_idioma["img_texto_ocasion"]
-    lbl_para = textos_idioma["img_texto_para"]
-    lbl_de = textos_idioma["img_texto_de"]
-
-    d.text((50, 50), f"{lbl_occ} {ocasion}", fill=(255,255,255), font=font_titulo)
-    d.text((50, 150), f"{lbl_para} {destinatario}", fill=(255,255,255), font=font_titulo)
-    
-    margen_y = 250
-    palabras = mensaje.split()
-    linea_actual = ""
-    for palabra in palabras:
-        if len(linea_actual) + len(palabra) < 35: 
-            linea_actual += palabra + " "
-        else:
-            d.text((50, margen_y), linea_actual, fill=(255,255,255), font=font_texto)
-            margen_y += 35
-            linea_actual = palabra + " "
-    d.text((50, margen_y), linea_actual, fill=(255,255,255), font=font_texto)
-
-    d.text((50, 700), f"{lbl_de} {remitente}", fill=(255,255,255), font=font_titulo)
+    # Escribir textos en la imagen
+    # Usamos posiciones fijas para evitar errores
+    d.text((20, 20), f"{ocasion}", fill=(0,0,0), font=fnt)
+    d.text((20, 60), f"Para: {para}", fill=(0,0,0), font=fnt)
+    d.text((20, 100), f"{texto}", fill=(0,0,0), font=fnt)
+    d.text((20, 400), f"De: {de}", fill=(0,0,0), font=fnt)
     
     buf = BytesIO()
     img.save(buf, format="PNG")
     return buf.getvalue()
 
-# --- INTERFAZ PRINCIPAL ---
-idioma = st.sidebar.radio("🌐 Language / Idioma", ["Español", "English"])
-t = TEXTOS[idioma]
-
-st.title(t["titulo"])
-st.markdown(f"*{t['subtitulo']}*")
-
-st.sidebar.header(t["sidebar_titulo"])
-
-ocasion = st.sidebar.selectbox(t["label_ocasion"], t["opciones_ocasion"])
-remitente = st.sidebar.text_input(t["label_remitente"], "Alex")
-destinatario = st.sidebar.text_input(t["label_destinatario"], "Sam")
-mensaje = st.text_area(t["label_mensaje"], t["placeholder_mensaje"])
-
-alma = obtener_alma(ocasion)
-
-if st.button(t["boton_generar"]):
-    with st.spinner(t["spinner"]):
+# --- BOTÓN MÁGICO ---
+if st.button(t["boton"]):
+    with st.spinner("Creando... / Creating..."):
         time.sleep(1)
         
-        # Lógica de voz corregida para evitar errores de copia
+        # 1. Generar Audio (Sin f-strings largos para evitar errores)
         if idioma == "Español":
-            texto_voz = f"Hola {destinatario}. {mensaje}. De parte de {remitente}."
+            texto_completo = "Hola " + destinatario + ". " + mensaje + ". De " + remitente
         else:
-            texto_voz = f"Hi {destinatario}. {mensaje}. From {remitente}."
-
-        tts = gTTS(text=texto_voz, lang=t["codigo_voz"], slow=False)
-        buffer_audio = BytesIO()
-        tts.write_to_fp(buffer_audio)
+            texto_completo = "Hi " + destinatario + ". " + mensaje + ". From " + remitente
+            
+        tts = gTTS(text=texto_completo, lang=t["lang_code"])
+        audio_buffer = BytesIO()
+        tts.write_to_fp(audio_buffer)
         
-        imagen_bytes = crear_imagen_descargable(
-            ocasion, mensaje, remitente, destinatario, 
-            alma['hex'], t
-        )
+        # 2. Generar Imagen
+        img_bytes = crear_imagen(ocasion, destinatario, remitente, mensaje)
         
+        # 3. Mostrar Resultados
         st.success(t["exito"])
         
-        col1, col2 = st.columns(2)
+        st.image(img_bytes, caption="Tu Tarjeta / Your Card")
+        st.download_button(t["descarga_img"], img_bytes, "tarjeta.png", "image/png")
         
-        with col1:
-            st.image(imagen_bytes)
-            st.download_button(label=t["btn_descarga_img"], data=imagen_bytes, file_name="cardia_card.png", mime="image/png")
-            
-        with col2:
-            st.audio(buffer_audio, format='audio/mp3')
-            st.download_button(label=t["btn_descarga_audio"], data=buffer_audio, file_name="cardia_voice.mp3", mime="audio/mpeg")
+        st.audio(audio_buffer)
+        st.download_button(t["descarga_audio"], audio_buffer, "audio.mp3", "audio/mpeg")
